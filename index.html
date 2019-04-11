@@ -4,7 +4,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="viewport" content="width=device-width, minimum-scale=1.0" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-   
+
    <link href='//fonts.googleapis.com/css?family=Roboto:400,300,400italic,500,700,100,900' rel='stylesheet' type='text/css'>
 
     <link type="text/css" rel="stylesheet" href="./lib/jquery-ui/jquery-ui.min.css" />
@@ -22,16 +22,20 @@
     <script src="./lib/jscolor/jscolor.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.4/ace.js"></script>
 
-    <script type="text/javascript">
+    <!--
+      Added by LuboJ, this file content normal draw2d shape consisting from lines, rectangles, ... so this is loaded then into canvas
+    -->
+    <script src="./GraphLangDefaultSymbols/template_1.js"></script>
 
-	var app=null;
-	$( window ).load(function() {
-       try{
-	       app  = new shape_designer.Application(true);
-	   }
-	   catch(e){
-	       alert(e);
-	   }
+    <script type="text/javascript">
+      var app=null;
+      $( window ).load(function() {
+        try{
+          app  = new shape_designer.Application(true);
+        }
+        catch(e){
+           alert(e);
+        }
 	});
     </script>
 </head>
@@ -326,13 +330,13 @@ testShape = testShape.extend({
 
 <script id="shape-base-template" type="text/js-template">
 // Generated Code for the Draw2D touch HTML5 lib
-//                                                        
-// http://www.draw2d.org                                  
-//                                                        
-// Go to the Designer http://www.draw2d.org               
-// to design your own shape or download user generated    
-//                                                        
-var {{{className}}} = {{{baseClass}}}.extend({            
+//
+// http://www.draw2d.org
+//
+// Go to the Designer http://www.draw2d.org
+// to design your own shape or download user generated
+//
+var {{{className}}} = {{{baseClass}}}.extend({
 
    NAME: "{{{className}}}",
 

@@ -92,36 +92,36 @@ conf.shapesPath  = "shapes/org/";
 // declare the namespace for this example
 var shape_designer = {
 		figure:{
-			
+
 		},
 		filter:{
-			
+
 		},
 		dialog:{
-			
+
 		},
 		policy:{
-			
+
 		},
 		storage:{
-			
+
 		}
 };
 
 /**
- * 
+ *
  * The **GraphicalEditor** is responsible for layout and dialog handling.
- * 
+ *
  * @author Andreas Herz
  */
 
 shape_designer.Application = Class.extend(
 {
     NAME : "shape_designer.Application",
-    
+
     /**
      * @constructor
-     * 
+     *
      * @param {String} canvasId the id of the DOM element to use as paint container
      */
     init : function()
@@ -156,14 +156,13 @@ shape_designer.Application = Class.extend(
 
         this.view.installEditPolicy(new shape_designer.policy.SelectionToolPolicy());
 
-
         // First check if a valid token is inside the local storage
         //
         this.autoLogin();
 
         // check if the user has added a "file" parameter. In this case we load the shape from
         // the draw2d.shape github repository
-        //
+
         var file = this.getParam("file");
         if(file){
             var path = conf.shapesPath+file.replace(/_/g,"/");
@@ -180,7 +179,8 @@ shape_designer.Application = Class.extend(
             });
         }
         else{
-            _this.fileNew();
+            if (GraphLangSymbolTemplate != undefined) _this.fileNew(GraphLangSymbolTemplate);
+            else  _this.fileNew();
         }
     },
 
@@ -246,7 +246,7 @@ shape_designer.Application = Class.extend(
 
       return results[1];
     },
- 	
+
 	fileNew: function(shapeTemplate)
     {
         this.view.clear();
@@ -257,7 +257,9 @@ shape_designer.Application = Class.extend(
             var reader = new draw2d.io.json.Reader();
             reader.unmarshal(this.view, shapeTemplate);
             this.view.getCommandStack().markSaveLocation();
-            this.view.centerDocument();
+
+            //LuboJ correction, don't go to middle
+            //this.view.centerDocument();
         }
     },
 
@@ -324,7 +326,7 @@ shape_designer.Application = Class.extend(
 
 
 shape_designer.View = draw2d.Canvas.extend({
-	
+
 	init:function(app, id){
         var _this = this;
 
@@ -391,19 +393,19 @@ shape_designer.View = draw2d.Canvas.extend({
             c.scrollTop((bb.y/newZoom- c.height()/2));
             c.scrollLeft((bb.x/newZoom- c.width()/2));
         },this);
-        
+
         // Inject the ZoomIn Button and the callbacks
         //
         $("#canvas_zoom_in").on("click",function(){
             setZoom(_this.getZoom()*1.2,true);
         });
- 
+
         // Inject the OneToOne Button
         //
         $("#canvas_zoom_normal").on("click",function(){
             setZoom(1.0, false);
         });
-      
+
         // Inject the ZoomOut Button and the callback
         //
         $("#canvas_zoom_out").on("click",function(){
@@ -441,8 +443,8 @@ shape_designer.View = draw2d.Canvas.extend({
 	/**
 	 * @method
 	 * Reset the view/canvas and starts with a clean and new document with default decorations
-	 * 
-	 * 
+	 *
+	 *
 	 */
 	reset: function()
     {
@@ -457,13 +459,13 @@ shape_designer.View = draw2d.Canvas.extend({
 
 	/**
 	 * Reset the view without any decorations. This is good before loading a document
-	 * 
+	 *
 	 */
 	clear: function()
     {
 	    this._super();
 	},
-	
+
     getExtFigure: function(id){
         var figure = null;
         this.getExtFigures().each(function(i,e){
@@ -477,25 +479,25 @@ shape_designer.View = draw2d.Canvas.extend({
 
     getExtFigures: function(){
 	    var figures = this.getFigures().clone();
-	    
+
 	    // the export rectangles are not part of the document itself. In this case we
 	    // filter them out
 	    //
 	    figures.grep(function(figure){
 	        return (typeof figure.isExtFigure  !=="undefined");
 	    });
-	    
+
 	    var lines = this.getLines().clone();
 	    lines.grep(function(line){
             return (typeof line.isExtFigure  !=="undefined");
         });
-	    
+
 	    figures.addAll(lines);
-	    
+
 	    return figures;
 	},
-	
-	
+
+
 	getBoundingBox: function(){
         var xCoords = [];
         var yCoords = [];
@@ -511,21 +513,21 @@ shape_designer.View = draw2d.Canvas.extend({
         var minY   = Math.min.apply(Math, yCoords);
         var width  = Math.max(10,Math.max.apply(Math, xCoords)-minX);
         var height = Math.max(10,Math.max.apply(Math, yCoords)-minY);
-        
+
         return new draw2d.geo.Rectangle(minX,minY,width,height);
 	},
-	
+
 	add: function(figure, x,y){
 	    this._super(figure, x,y);
 	},
 
 	hideDecoration: function(){
         this.uninstallEditPolicy( this.grid);
-        this.getFigures().each( function(index, figure){ 
+        this.getFigures().each( function(index, figure){
             figure.unselect();
         });
     },
-    
+
     showDecoration: function(){
         this.installEditPolicy( this.grid);
     },
@@ -582,15 +584,15 @@ shape_designer.View = draw2d.Canvas.extend({
 
 
 shape_designer.Layer = Class.extend({
-	
+
 	NAME: "shape_designer.Layer",
 
 	init:function(app, elementId, view){
 		this.html = $("#"+elementId);
 		this.view = view;
-		
+
 		// register this class as event listener for the canvas
-		// CommandStack. This is required to update the state of 
+		// CommandStack. This is required to update the state of
 		// the Undo/Redo Buttons.
 		//
 		view.getCommandStack().addEventListener(this);
@@ -605,21 +607,21 @@ shape_designer.Layer = Class.extend({
 	 * @method
 	 * Called if the selection in the cnavas has been changed. You must register this
 	 * class on the canvas to receive this event.
-	 * 
+	 *
 	 * @param {draw2d.Figure} figure
 	 */
 	onSelectionChanged : function(emitter, event)
 	{
         this._updateSelection();
 	},
-	
+
 	/**
 	 * @method
-	 * Sent when an event occurs on the command stack. draw2d.command.CommandStackEvent.getDetail() 
+	 * Sent when an event occurs on the command stack. draw2d.command.CommandStackEvent.getDetail()
 	 * can be used to identify the type of event which has occurred.
-	 * 
+	 *
 	 * @template
-	 * 
+	 *
 	 * @param {draw2d.command.CommandStackEvent} event
 	 **/
 	stackChanged:function(event)
@@ -634,7 +636,7 @@ shape_designer.Layer = Class.extend({
                        '<span data-figure="'+figure.id+'" class="icon layer_edit pull-right ion-ios-pricetag-outline" ></span>'+
 	        		'</div>');
 	    },this),true);
-	    
+
 	    this.html.sortable({
 	        axis:"y",
 	        update: $.proxy(function( event, ui ) {
@@ -644,7 +646,7 @@ shape_designer.Layer = Class.extend({
 
 	        },this)
 	    });
- 
+
 	    $(".layerElement .layer_edit").on("click", $.proxy(function(event){
             var figure =this.view.getExtFigure($(event.target).data("figure"));
             bootbox.prompt({
@@ -663,7 +665,7 @@ shape_designer.Layer = Class.extend({
 			setTimeout(function(){$(".bootbox-input").focus().select();},200);
  	    },this));
 
-	    
+
 	    $(".layerElement .layer_visibility").on("click", $.proxy(function(event){
             var figure =this.view.getExtFigure($(event.target).data("figure"));
             figure.setVisible(!figure.isVisible());
@@ -686,7 +688,7 @@ shape_designer.Layer = Class.extend({
 
         this._updateSelection();
 	},
-	
+
 	_updateSelection: function()
 	{
         $(".layerElement").removeClass("layerSelectedElement");
@@ -699,9 +701,9 @@ shape_designer.Layer = Class.extend({
 /* jshint evil:true */
 
 shape_designer.FilterPane = Class.extend({
-	
+
     DEFAULT_LABEL : "Properties",
-    
+
 	init:function(app, elementId, view){
 		this.html = $("#"+elementId);
 		this.view = view;
@@ -717,7 +719,7 @@ shape_designer.FilterPane = Class.extend({
 	 * @method
 	 * Called if the selection in the canvas has been changed. You must register this
 	 * class on the canvas to receive this event.
-	 * 
+	 *
      * @param {draw2d.Canvas} canvas the emitter of the event. In this case it is the canvas.
      * @param {draw2d.Figure} figure
 	 */
@@ -726,14 +728,14 @@ shape_designer.FilterPane = Class.extend({
 
 	    this.html.html('');
 	    $('#add_filter_button').addClass('disabled');
-	    
+
 	    if(this.currentFigure!==null && typeof this.currentFigure.isExtFigure !=="undefined"){
 	        this.currentFigure.filters.each($.proxy(function(i,filter){
 	            filter.removePane();
 	        },this));
 	    }
 	    $("#add_filter_action_menu").html("");
-	    
+
 	    if(figure!==null &&  typeof figure.isExtFigure  !=="undefined"){
             figure.filters.each($.proxy(function(i,filter){
                 filter.insertPane(figure,this.html);
@@ -743,7 +745,7 @@ shape_designer.FilterPane = Class.extend({
             $.each(figure.getPotentialFilters(), function(i,e){
                 $("#add_filter_action_menu").append("<li><a href='#' data-filter='"+e.impl+"' >"+e.label+"</a></li>");
             });
-                    
+
             var _this = this;
             $("#add_filter_action_menu a").on("click", function(){
                 var $this = $(this);
@@ -754,20 +756,20 @@ shape_designer.FilterPane = Class.extend({
             });
 	    }
 
-	    this.currentFigure = figure;	    
+	    this.currentFigure = figure;
 	}
 });
 /* jshint evil:true */
 
 shape_designer.Toolbar = Class.extend({
-    
+
     init:function(app, elementId, view){
         this.html = $("#"+elementId);
         this.view = view;
         this.app = app;
 
         // register this class as event listener for the canvas
-        // CommandStack. This is required to update the state of 
+        // CommandStack. This is required to update the state of
         // the Undo/Redo Buttons.
         //
         view.getCommandStack().addEventListener(this);
@@ -776,7 +778,7 @@ shape_designer.Toolbar = Class.extend({
         // of the Delete Button
         //
         view.on("select", $.proxy(this.onSelectionChanged,this));
-        
+
         this.fileName = null;
 
         this.html.append(
@@ -789,11 +791,10 @@ shape_designer.Toolbar = Class.extend({
                 '    <div id="currentTool_message"></div>'+
                 '  </div>'+
                 '</span>');
-          
+
 
         this.toolbarDiv=$("<div class=\"toolbarGroup pull-right\"></div>");
         this.html.append(this.toolbarDiv);
-
 
         // Inject the UNDO Button and the callbacks
         //
@@ -805,7 +806,6 @@ shape_designer.Toolbar = Class.extend({
             this.view.getCommandStack().undo();
         },this)).prop( "disabled", true );
         Mousetrap.bind("ctrl+z", $.proxy(function (event) {this.undoButton.click();return false;},this));
-
 
         // Inject the REDO Button and the callback
         //
@@ -819,6 +819,41 @@ shape_designer.Toolbar = Class.extend({
 
         buttonGroup=$('<div class="btn-group" data-toggle="buttons"  title="Tools and Shape"></div>');
         this.toolbarDiv.append(buttonGroup);
+
+
+
+
+
+
+
+
+
+        /**************************************************************************************
+         *  LuboJ button to do my thing, COPY CANVAS
+         **************************************************************************************/
+        this.myCopyCanvasButton  = $('<button  title="Delete" class=\"btn btn-default\">Copy Canvas</button>');
+        buttonGroup.append(this.myCopyCanvasButton);
+        this.myCopyCanvasButton.on("click",function(){
+          var writer = new draw2d.io.json.Writer();
+          var jsonStr = "";
+          writer.marshal(app.view,function(json){
+              jsonStr = JSON.stringify(json, null, 2);
+              var copyElement = document.createElement('textarea');
+
+      				copyElement.innerHTML= "var GraphLangSymbolTemplate = " + jsonStr + ";";
+      				copyElement = document.body.appendChild(copyElement);
+      				copyElement.select();
+      				document.execCommand('copy');
+      				copyElement.remove();
+
+          });
+        });
+
+
+
+
+
+
 
 
         // Inject the DELETE Button
@@ -866,12 +901,12 @@ shape_designer.Toolbar = Class.extend({
            $("#tool_shape_image").attr("src", $target.find("img").attr("src"));
            $("#tool_shape_button").data("policy", $target.data("policy"));
            $("#tool_shape_image").click();
-           
+
            $("#tool_shape_image")
                .attr('data-original-title', $target.data("original-title"))
                .tooltip('fixTitle');
         },this));
-       
+
         $("#tool_shape_image").on("click",$.proxy(function(){
             this.view.installEditPolicy(eval("new "+$("#tool_shape_button").data("policy")+"()"));
         },this));
@@ -912,7 +947,7 @@ shape_designer.Toolbar = Class.extend({
            this.view.installEditPolicy(new shape_designer.policy.GeoDifferenceToolPolicy());
        },this));
        Mousetrap.bind(["D", "d"], $.proxy(function (event) {this.differenceButton.click();return false;},this));
-        
+
        this.intersectionButton = $('<label data-toggle="tooltip" title="Polygon Intersection <span class=\'highlight\'> [ I ]</span>"  class="btn btn-sm btn-primary"><input type="radio" name="selected_tool" id="too3" class="btn-default btn" ><img src="./assets/images/toolbar_intersect.png"></label>');
        buttonGroup.append(this.intersectionButton);
        this.intersectionButton.on("click",$.proxy(function(){
@@ -1020,21 +1055,21 @@ shape_designer.Toolbar = Class.extend({
      * @method
      * Called if the selection in the cnavas has been changed. You must register this
      * class on the canvas to receive this event.
-     * 
+     *
      * @param {draw2d.Figure} figure
      */
     onSelectionChanged : function(emitter, event)
     {
         this.deleteButton.prop( "disabled", event.figure===null );
     },
-    
+
     /**
      * @method
-     * Sent when an event occurs on the command stack. draw2d.command.CommandStackEvent.getDetail() 
+     * Sent when an event occurs on the command stack. draw2d.command.CommandStackEvent.getDetail()
      * can be used to identify the type of event which has occurred.
-     * 
+     *
      * @template
-     * 
+     *
      * @param {draw2d.command.CommandStackEvent} event
      **/
     stackChanged:function(event)
@@ -1042,12 +1077,12 @@ shape_designer.Toolbar = Class.extend({
         this.undoButton.prop("disabled", !event.getStack().canUndo() );
         this.redoButton.prop("disabled", !event.getStack().canRedo() );
     }
-    
+
 });
 /* jshint evil:true */
 
 shape_designer.Breadcrumb = Class.extend({
-	
+
 
 	init:function(app, elementId)
 	{
@@ -1058,7 +1093,7 @@ shape_designer.Breadcrumb = Class.extend({
 	 * @method
 	 * Called if the selection in the canvas has been changed. You must register this
 	 * class on the canvas to receive this event.
-	 * 
+	 *
      * @param {draw2d.Canvas} canvas the emitter of the event. In this case it is the canvas.
      * @param {draw2d.Figure} figure
 	 */
@@ -1088,7 +1123,7 @@ shape_designer.dialog.About = Class.extend(
      },
 
 	show:function(){
-		
+
 	    this.splash = $(
 	            '<div id="splash">'+
 	            '<div>Draw2D Designer<br>'+
@@ -1097,11 +1132,11 @@ shape_designer.dialog.About = Class.extend(
 	            '</div>');
 	    this.splash.hide();
 	    $("body").append(this.splash);
-	    
+
 	    this.splash.fadeIn("fast");
-	    
+
 	},
-	
+
 	hide: function(){
         this.splash.delay(2500)
         .fadeOut( "slow", $.proxy(function() {
@@ -1109,8 +1144,8 @@ shape_designer.dialog.About = Class.extend(
         },this));
 	}
 
-      
-});  
+
+});
 /* jshint evil: true */
 
 shape_designer.dialog.FigureTest = Class.extend(
@@ -1124,7 +1159,7 @@ shape_designer.dialog.FigureTest = Class.extend(
 		this.animationFrameFunc = $.proxy(this._calculate,this);
 
 		var writer = new shape_designer.FigureWriter();
-		
+
 		writer.marshal(app.view, "testShape",function(js){
 			try{
 				eval(js);
@@ -1240,7 +1275,7 @@ shape_designer.dialog.FigureTest = Class.extend(
 
 
 
-});  
+});
 shape_designer.dialog.FigureMarkdownEdit = Class.extend(
 {
 
@@ -1487,7 +1522,7 @@ shape_designer.dialog.FigureCodeExport = Class.extend(
 	show:function(){
 
 		var writer = new shape_designer.FigureWriter();
-		
+
 		writer.marshal(app.view, "testShape",function(js){
 
 	        var splash = $(
@@ -1503,10 +1538,10 @@ shape_designer.dialog.FigureCodeExport = Class.extend(
 				 splash.removeClass("open");
 				 setTimeout(function(){splash.remove();},400);
              };
-             
+
 	         $("#export_close").on("click",removeDialog);
 	         prettyPrint();
-	         
+
 	         setTimeout(function(){splash.addClass("open");},100);
 
 			$("#export_clipboard").off("click").on("click",function(ev){
@@ -1542,8 +1577,8 @@ shape_designer.dialog.FigureCodeExport = Class.extend(
 
 	}
 
-      
-});  
+
+});
 shape_designer.dialog.FigureCodeEdit = Class.extend(
 {
     init:function(){
@@ -1637,8 +1672,8 @@ shape_designer.dialog.FigureCodeEdit = Class.extend(
         });
 	}
 
-      
-});  
+
+});
 shape_designer.dialog.FileOpen = Class.extend({
 
     /**
@@ -2135,44 +2170,44 @@ shape_designer.dialog.ShapeSettings = Class.extend({
 
 shape_designer.filter.Filter = Class.extend({
     NAME : "shape_designer.filter.Filter",
-	
+
 	init:function(){
 	},
 
 	/**
 	 * @method
-	 * Sent when an event occurs on the command stack. draw2d.command.CommandStackEvent.getDetail() 
+	 * Sent when an event occurs on the command stack. draw2d.command.CommandStackEvent.getDetail()
 	 * can be used to identify the type of event which has occurred.
-	 * 
+	 *
 	 * @template
-	 * 
+	 *
 	 **/
 	apply:function(figure, attributes)
     {
 	},
-	
+
 	onInstall: function(figure)
     {
-	    
+
 	},
-	
+
 	insertPane: function(figure, $parent)
     {
 
     },
-   
+
     removePane:function(){
     },
-    
+
     getPersistentAttributes : function(relatedFigure)
     {
 
         var memento = {};
         memento.name = this.NAME;
-        
+
         return memento;
     },
-    
+
     setPersistentAttributes : function(relatedFigure, memento)
     {
 
@@ -2187,19 +2222,19 @@ shape_designer.filter.Filter = Class.extend({
 
 shape_designer.filter.FanoutFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.FanoutFilter",
-    
+
 	init:function(){
 	    this._super();
 	},
-	
+
 	insertPane: function(figure, $parent){
        var cssScope = this.NAME.replace(/[.]/g, "_");
-	    
+
 	   $parent.append('<div id="'+cssScope+'_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#'+cssScope+'_width_panel">'+
                 	   '     Maximal fan out'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="'+cssScope+'_width_panel">'+
                 	   '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
@@ -2221,11 +2256,11 @@ shape_designer.filter.FanoutFilter = shape_designer.filter.Filter.extend({
 
 
 	   },
-	   
+
 	   removePane:function()
 	   {
 	   },
-	   
+
 	   onInstall:function(figure)
 	   {
 	   }
@@ -2238,21 +2273,21 @@ shape_designer.filter.FanoutFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.StrokeFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.StrokeFilter",
-    
+
 	init:function(){
 	    this._super();
 	    this.colorPicker = null;
 	},
-	
+
 	insertPane: function(figure, $parent){
        var cssScope = this.NAME.replace(/[.]/g, "_");
-	    
+
 	   $parent.append('<div id="'+cssScope+'_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#'+cssScope+'_width_panel">'+
                 	   '     Stroke'+
                        '    <span id="button_remove_'+cssScope+'" class="btn btn-mini icon ion-ios-close-outline pull-right" ></span>'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="'+cssScope+'_width_panel">'+
                 	   '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
@@ -2276,13 +2311,13 @@ shape_designer.filter.StrokeFilter = shape_designer.filter.Filter.extend({
                this.setStroke(parseInt($("input[name='filter_"+cssScope+"_width']").val()));
            },figure));
 
-           
+
            var picker = this.colorPicker  = new jscolor.color(document.getElementById('filter_'+cssScope+'_color'), {});
            this.colorPicker.fromString(figure.getColor().hash());
            this.colorPicker.onImmediateChange= $.proxy(function(){
               this.setColor("#"+picker.toString());
            },figure);
-           
+
            $("#button_remove_"+cssScope).on("click",$.proxy(function(){
                figure.removeFilter(this);
                figure.setStroke(0);
@@ -2290,13 +2325,13 @@ shape_designer.filter.StrokeFilter = shape_designer.filter.Filter.extend({
            },this));
 
 	   },
-	   
+
 	   removePane:function(){
 	       if(this.colorPicker !==null){
 	           this.colorPicker.hidePicker();
 	       }
 	   },
-	   
+
 	    onInstall:function(figure){
 	        figure.setStroke(1);
 	    }
@@ -2310,12 +2345,12 @@ shape_designer.filter.StrokeFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.SizeFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.SizeFilter",
-    
+
 	init:function(){
 	    this._super();
 	    this.block = false;
 	},
-	
+
 	insertPane: function(figure, $parent){
 
         $parent.append('<div id="size_filter_container" class="panel panel-default">'+
@@ -2355,7 +2390,7 @@ shape_designer.filter.SizeFilter = shape_designer.filter.Filter.extend({
                finally{
                    this.block = false;
                }
-               
+
            },this));
 
            $("input[name='filter_height']").on("change", $.proxy(function(){
@@ -2382,7 +2417,7 @@ shape_designer.filter.SizeFilter = shape_designer.filter.Filter.extend({
 	   removePane:function()
        {
 	   },
-	   
+
 	   onInstall:function(figure)
        {
 	   }
@@ -2396,20 +2431,20 @@ shape_designer.filter.SizeFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.OutlineStrokeFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.OutlineStrokeFilter",
-    
+
 	init:function(){
 	    this._super();
 	    this.colorPicker = null;
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	   $parent.append('<div id="outlinestroke_filter_conainer" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#outlinestroke_width_panel">'+
                 	   '     Outline Stroke'+
                        '    <span id="button_remove_OutlineStrokeFilter" class="btn btn-mini icon ion-ios-close-outline pull-right" ></span>'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="outlinestroke_width_panel">'+
                 	   '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
@@ -2434,13 +2469,13 @@ shape_designer.filter.OutlineStrokeFilter = shape_designer.filter.Filter.extend(
                this.setOutlineStroke(parseFloat($("input[name='filter_outlinestroke']").val()));
            },figure));
 
-           
+
            var picker = this.colorPicker  = new jscolor.color(document.getElementById('filter_outlinestroke_color'), {});
            this.colorPicker.fromString(figure.getOutlineColor().hash());
            this.colorPicker.onImmediateChange= $.proxy(function(){
               this.setOutlineColor("#"+picker.toString());
            },figure);
-           
+
            $("#button_remove_OutlineStrokeFilter").on("click",$.proxy(function(){
                figure.removeFilter(this);
                figure.setOutlineStroke(0);
@@ -2448,13 +2483,13 @@ shape_designer.filter.OutlineStrokeFilter = shape_designer.filter.Filter.extend(
            },this));
 
 	   },
-	   
+
 	   removePane:function(){
 	       if(this.colorPicker !==null){
 	           this.colorPicker.hidePicker();
 	       }
 	   },
-	   
+
 	    onInstall:function(figure){
 	        figure.setOutlineStroke(1);
 	        figure.setOutlineColor("#ff0000");
@@ -2469,19 +2504,19 @@ shape_designer.filter.OutlineStrokeFilter = shape_designer.filter.Filter.extend(
 
 shape_designer.filter.BlurFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.BlurFilter",
-    
+
 	init:function(){
 	    this._super();
         this.cssScope = this.NAME.replace(/[.]/g, "_");
 	},
-	
+
 	insertPane: function(figure, $parent){
 	   $parent.append('<div id="'+this.cssScope+'_filter_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#'+this.cssScope+'_width_panel">'+
                 	   '     Blur'+
                        '    <span id="button_remove_'+this.cssScope+'" class="btn btn-mini icon ion-ios-close-outline pull-right" ></span>'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="'+this.cssScope+'_blur_panel">'+
                 	   '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
@@ -2500,7 +2535,7 @@ shape_designer.filter.BlurFilter = shape_designer.filter.Filter.extend({
                this.setBlur(parseInt($("#filter_blur").val()));
            },figure));
 
-           
+
            $("#button_remove_"+this.cssScope).on("click",$.proxy(function(){
                figure.removeFilter(this);
                figure.setBlur(0);
@@ -2518,20 +2553,20 @@ shape_designer.filter.BlurFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.FillColorFilter = shape_designer.filter.Filter.extend({
 	NAME : "shape_designer.filter.FillColorFilter",
-	
+
 	init:function(){
 	    this._super();
 	    this.colorPicker = null;
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	   $parent.append('<div id="fill_color_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#color_fill_panel">'+
                 	   '    Color Fill'+
                        '    <span id="button_remove_FillColorFilter" class="btn btn-mini icon ion-ios-close-outline pull-right" ></span>'+
                 	   ' </div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="color_fill_panel">'+
                        '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
@@ -2542,30 +2577,30 @@ shape_designer.filter.FillColorFilter = shape_designer.filter.Filter.extend({
                        '    </div>'+
                        ' </div>'+
                 	   '</div>');
-           
+
            var picker = this.colorPicker  = new jscolor.color(document.getElementById('filter_color_fill'), {});
            this.colorPicker.fromString(figure.getBackgroundColor().hash());
            this.colorPicker.onImmediateChange= $.proxy(function(){
               this.setBackgroundColor("#"+picker.toString());
            },figure);
-           
+
            $("#button_remove_FillColorFilter").on("click",$.proxy(function(){
                figure.removeFilter(this);
                figure.setBackgroundColor(null);
                $("#fill_color_container").animate({"height" : "0", "opacity":0, "margin-bottom":0}, 500, function(){$('#fill_color_container').remove();});
            },this));
 	},
-	  
+
 	onInstall:function(figure){
         figure.setBackgroundColor("#f0f3f3");
 	},
-	
+
 	removePane:function(){
 	    if(this.colorPicker !==null){
 	        this.colorPicker.hidePicker();
 	    }
 	}
-	
+
 
 });
 
@@ -2576,20 +2611,20 @@ shape_designer.filter.FillColorFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.FontColorFilter = shape_designer.filter.Filter.extend({
 	NAME : "shape_designer.filter.FontColorFilter",
-	
+
 	init:function(){
 	    this._super();
 	    this.colorPicker = null;
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	   $parent.append('<div id="fill_color_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#color_fill_panel">'+
                 	   '    Font Color'+
                        '    <span id="button_remove_FillColorFilter" class="btn btn-mini icon ion-ios-close-outline pull-right" ></span>'+
                 	   ' </div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="color_fill_panel">'+
                        '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
@@ -2600,30 +2635,30 @@ shape_designer.filter.FontColorFilter = shape_designer.filter.Filter.extend({
                        '    </div>'+
                        ' </div>'+
                 	   '</div>');
-           
+
            var picker = this.colorPicker  = new jscolor.color(document.getElementById('filter_color_fill'), {});
            this.colorPicker.fromString(figure.getFontColor().hash());
            this.colorPicker.onImmediateChange= $.proxy(function(){
               this.setFontColor("#"+picker.toString());
            },figure);
-           
+
            $("#button_remove_FillColorFilter").on("click",$.proxy(function(){
                figure.removeFilter(this);
                figure.setFontColor(null);
                $("#fill_color_container").animate({"height" : "0", "opacity":0, "margin-bottom":0}, 500, function(){$('#fill_color_container').remove();});
            },this));
 	},
-	  
+
 	onInstall:function(figure){
         figure.setFontColor("#000000");
 	},
-	
+
 	removePane:function(){
 	    if(this.colorPicker !==null){
 	        this.colorPicker.hidePicker();
 	    }
 	}
-	
+
 
 });
 
@@ -2634,19 +2669,19 @@ shape_designer.filter.FontColorFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.FontSizeFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.FontSizeFilter",
-    
+
 	init:function(){
 	    this._super();
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	   $parent.append('<div id="fontsize_filter_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#fontsize_width_panel">'+
                 	   '     Font Size'+
                        '    <span id="button_remove_FontSizeFilter" class="btn btn-mini icon ion-ios-close-outline pull-right" ></span>'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="fontsize_width_panel">'+
                 	   '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
@@ -2668,7 +2703,7 @@ shape_designer.filter.FontSizeFilter = shape_designer.filter.Filter.extend({
                this.setFontSize(parseInt($("input[name='filter_fontsize']").val()));
            },figure));
 
-           
+
            $("#button_remove_FontSizeFilter").on("click",$.proxy(function(){
                figure.removeFilter(this);
                figure.setFontSize(12);
@@ -2676,10 +2711,10 @@ shape_designer.filter.FontSizeFilter = shape_designer.filter.Filter.extend({
            },this));
 
 	   },
-	   
+
 	   removePane:function(){
 	   },
-	   
+
 	    onInstall:function(figure){
 	     //   figure.setFontSize(1);
 	    }
@@ -2693,13 +2728,13 @@ shape_designer.filter.FontSizeFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.OpacityFilter = shape_designer.filter.Filter.extend({
     NAME : "shape_designer.filter.OpacityFilter",
-	
+
 	init:function(){
 	    this._super();
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	       $parent.append('<div id="opacity_container" class="panel panel-default">'+
                    ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#opacity_panel">'+
                    '    Opacity'+
@@ -2726,17 +2761,17 @@ shape_designer.filter.OpacityFilter = shape_designer.filter.Filter.extend({
            $("#filter_opacity").on("change", $.proxy(function(){
                this.setAlpha(parseInt($("#filter_opacity").val())/100.0);
            },figure));
-           
+
            $("#button_remove_OpacityFilter").on("click",$.proxy(function(){
                figure.removeFilter(this);
                figure.setAlpha(1);
                $("#opacity_container").animate({"height" : "0", "opacity":0, "margin-bottom":0}, 500, function(){$('#opacity_container').remove();});
            },this));
 	   },
-	   
+
 	   removePane:function(){
 	   }
-	
+
 
 });
 
@@ -2747,32 +2782,32 @@ shape_designer.filter.OpacityFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.LinearGradientFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.LinearGradientFilter",
-    
+
 	init:function(){
 	    this._super();
 	    this.colorPicker1 = null;
 	    this.colorPicker2 = null;
-	    
+
 	    this.startColor ="#f0f0f0";
 	    this.endColor   ="#3f3f3f";
 	    this.angle      =0;
         this.cssScope = this.NAME.replace(/[.]/g, "_");
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	   $parent.append('<div id="'+this.cssScope+'_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#'+this.cssScope+'_panel">'+
                 	   '     Linear Gradient'+
                        '    <span id="button_remove_'+this.cssScope+'" class="btn btn-mini icon ion-ios-close-outline pull-right" ></span>'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="'+this.cssScope+'_panel">'+
                 	   '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
                        '      <div class="input-group text-center" style="width:100%" >'+
                  	   '           <div id="'+this.cssScope+'_angle" />'+
-                       '      </div> '+ 
+                       '      </div> '+
                        '       <div class="input-group">'+
                        '          <span class="input-group-addon">#</span>'+
                        '          <input id="'+this.cssScope+'_color1" type="text" value="'+this.startColor+'" class="form-control color"/>'+
@@ -2787,44 +2822,44 @@ shape_designer.filter.LinearGradientFilter = shape_designer.filter.Filter.extend
 
     	   $('#'+this.cssScope+'_angle').anglepicker({
     	       start: function(e, ui) {
-    
+
     	       },
     	       change: $.proxy(function(e, ui) {
     	           this.angle = ui.value;
     	              figure.repaint();
      	       },this),
     	       stop: function(e, ui) {
-    
+
     	       },
     	       value: this.angle
     	   });
-          
+
            var picker1 = this.colorPicker1  = new jscolor.color($("#"+this.cssScope+'_color1')[0], {});
            this.colorPicker1.fromString(this.startColor);
            this.colorPicker1.onImmediateChange= $.proxy(function(){
               this.startColor= "#"+picker1.toString();
               figure.repaint();
            },this);
-           
+
            var picker2 = this.colorPicker2  = new jscolor.color($("#"+this.cssScope+'_color2')[0], {});
            this.colorPicker2.fromString(this.endColor);
            this.colorPicker2.onImmediateChange= $.proxy(function(){
               this.endColor ="#"+picker2.toString();
               figure.repaint();
            },this);
- 
-           
+
+
            $("#button_remove_"+this.cssScope).on("click",$.proxy(function(){
                figure.removeFilter(this);
                $('#'+this.cssScope+'_container').animate({"height" : "0", "opacity":0, "margin-bottom":0}, 500, function(){$('#'+this.cssScope+'_container').remove();});
            },this));
 
 	   },
-	   
+
 	    apply:function(figure, attributes){
-	        attributes.fill = this.angle+"-"+this.endColor+"-"+this.startColor;    
+	        attributes.fill = this.angle+"-"+this.endColor+"-"+this.startColor;
 	    },
-	    
+
 	   removePane:function(){
 	       if(this.colorPicker1 !==null){
 	           this.colorPicker1.hidePicker();
@@ -2833,32 +2868,32 @@ shape_designer.filter.LinearGradientFilter = shape_designer.filter.Filter.extend
 	           this.colorPicker2.hidePicker();
 	       }
 	   },
-	   
+
 	    onInstall:function(figure){
 	        figure.setStroke(1);
 	    },
-	    
-	    getPersistentAttributes : function(relatedFigure){   
+
+	    getPersistentAttributes : function(relatedFigure){
 	        var memento = this._super(relatedFigure);
-	        
+
             memento.startColor = this.startColor;
             memento.endColor = this.endColor;
 	        memento.angle = this.angle;
-	        
+
 	        return memento;
 	    },
-	    
+
 	    setPersistentAttributes : function(relatedFigure, memento){
 	        this._super(relatedFigure, memento);
-	        
+
             this.startColor = memento.startColor;
             this.endColor = memento.endColor;
 	        this.angle = memento.angle;
-	        
+
 	        return memento;
 	    }
 
-	
+
 
 });
 
@@ -2869,32 +2904,32 @@ shape_designer.filter.LinearGradientFilter = shape_designer.filter.Filter.extend
 
 shape_designer.filter.TextLinearGradientFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.TextLinearGradientFilter",
-    
+
 	init:function(){
 	    this._super();
 	    this.colorPicker1 = null;
 	    this.colorPicker2 = null;
-	    
+
 	    this.startColor ="#f0f0f0";
 	    this.endColor   ="#3f3f3f";
 	    this.angle      =0;
         this.cssScope = this.NAME.replace(/[.]/g, "_");
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	   $parent.append('<div id="'+this.cssScope+'_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#'+this.cssScope+'_panel">'+
                 	   '     Linear Gradient'+
                        '    <span id="button_remove_'+this.cssScope+'" class="btn btn-mini icon ion-ios-close-outline pull-right" ></span>'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="'+this.cssScope+'_panel">'+
                 	   '   <div class="form-group">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
                        '      <div class="input-group text-center" style="width:100%" >'+
                  	   '           <div id="'+this.cssScope+'_angle" />'+
-                       '      </div> '+ 
+                       '      </div> '+
                        '       <div class="input-group">'+
                        '          <span class="input-group-addon">#</span>'+
                        '          <input id="'+this.cssScope+'_color1" type="text" value="'+this.startColor+'" class="form-control color"/>'+
@@ -2909,45 +2944,45 @@ shape_designer.filter.TextLinearGradientFilter = shape_designer.filter.Filter.ex
 
     	   $('#'+this.cssScope+'_angle').anglepicker({
     	       start: function(e, ui) {
-    
+
     	       },
     	       change: $.proxy(function(e, ui) {
     	           this.angle = ui.value;
     	              figure.repaint();
      	       },this),
     	       stop: function(e, ui) {
-    
+
     	       },
     	       value: this.angle
     	   });
-          
+
            var picker1 = this.colorPicker1  = new jscolor.color($("#"+this.cssScope+'_color1')[0], {});
            this.colorPicker1.fromString(this.startColor);
            this.colorPicker1.onImmediateChange= $.proxy(function(){
               this.startColor= "#"+picker1.toString();
               figure.repaint();
            },this);
-           
+
            var picker2 = this.colorPicker2  = new jscolor.color($("#"+this.cssScope+'_color2')[0], {});
            this.colorPicker2.fromString(this.endColor);
            this.colorPicker2.onImmediateChange= $.proxy(function(){
               this.endColor ="#"+picker2.toString();
               figure.repaint();
            },this);
- 
-           
+
+
            $("#button_remove_"+this.cssScope).on("click",$.proxy(function(){
                figure.removeFilter(this);
                $('#'+this.cssScope+'_container').animate({"height" : "0", "opacity":0, "margin-bottom":0}, 500, function(){$('#'+this.cssScope+'_container').remove();});
            },this));
 
 	   },
-	   
+
 	    apply:function(figure, attributes, lattr){
-	        lattr.fill= this.angle+"-"+this.endColor+"-"+this.startColor;    
+	        lattr.fill= this.angle+"-"+this.endColor+"-"+this.startColor;
 	        console.log("ddd");
 	    },
-	    
+
 	   removePane:function(){
 	       if(this.colorPicker1 !==null){
 	           this.colorPicker1.hidePicker();
@@ -2956,32 +2991,32 @@ shape_designer.filter.TextLinearGradientFilter = shape_designer.filter.Filter.ex
 	           this.colorPicker2.hidePicker();
 	       }
 	   },
-	   
+
 	    onInstall:function(figure){
-	     
+
 	    },
-	    
-	    getPersistentAttributes : function(relatedFigure){   
+
+	    getPersistentAttributes : function(relatedFigure){
 	        var memento = this._super(relatedFigure);
-	        
+
             memento.startColor = this.startColor;
             memento.endColor = this.endColor;
 	        memento.angle = this.angle;
-	        
+
 	        return memento;
 	    },
-	    
+
 	    setPersistentAttributes : function(relatedFigure, memento){
 	        this._super(relatedFigure, memento);
-	        
+
             this.startColor = memento.startColor;
             this.endColor = memento.endColor;
 	        this.angle = memento.angle;
-	        
+
 	        return memento;
 	    }
 
-	
+
 
 });
 
@@ -2992,14 +3027,14 @@ shape_designer.filter.TextLinearGradientFilter = shape_designer.filter.Filter.ex
 
 shape_designer.filter.PortTypeFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.PortTypeFilter",
-    
+
 	init:function(){
 	    this._super();
-	    
+
 	    this.type   =0;
         this.cssScope = this.NAME.replace(/[.]/g, "_");
 	},
-	
+
 	insertPane: function(figure, $parent){
 
 	   var _this = this;
@@ -3008,7 +3043,7 @@ shape_designer.filter.PortTypeFilter = shape_designer.filter.Filter.extend({
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#'+this.cssScope+'_panel">'+
                 	   '     Port Type'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="'+this.cssScope+'_panel">'+
                 	   '   <div class="form-group portTypeOption">'+
 
@@ -3038,8 +3073,8 @@ shape_designer.filter.PortTypeFilter = shape_designer.filter.Filter.extend({
 	           figure.setInputType(typeName);
 	       });
 	   },
-	   
-	    
+
+
 
 		removePane : function() {
 		},
@@ -3067,14 +3102,14 @@ shape_designer.filter.PortTypeFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.PortDirectionFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.PortDirectionFilter",
-    
+
 	init:function(){
 	    this._super();
-	    
+
 	    this.type   =0;
         this.cssScope = this.NAME.replace(/[.]/g, "_");
 	},
-	
+
 	insertPane: function(figure, $parent){
 	   var _this = this;
 	   var dir = figure.getConnectionDirection();
@@ -3082,7 +3117,7 @@ shape_designer.filter.PortDirectionFilter = shape_designer.filter.Filter.extend(
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#'+this.cssScope+'_panel">'+
                 	   '     Connection Direction'+
                 	   '</div>'+
-                	   
+
                 	   ' <div class="panel-body collapse in" id="'+this.cssScope+'_panel">'+
                 	   '   <div class="form-group portDirectionOption">'+
                        '      <div class="input-group" ></div> '+ // required to ensure the correct width of the siblings
@@ -3128,8 +3163,8 @@ shape_designer.filter.PortDirectionFilter = shape_designer.filter.Filter.extend(
 			   figure.setConnectionDirection(dir);
 		   });
 	   },
-	   
-	    
+
+
 
 		removePane : function() {
 		},
@@ -3157,14 +3192,14 @@ shape_designer.filter.PortDirectionFilter = shape_designer.filter.Filter.extend(
 
 shape_designer.filter.PositionFilter = shape_designer.filter.Filter.extend({
     NAME :"shape_designer.filter.PositionFilter",
-    
+
 	init:function(){
 	    this._super();
 	    this.block = false;
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	   $parent.append('<div id="position_filter_container" class="panel panel-default">'+
                 	   ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#position_width_panel">'+
                 	   '     Position'+
@@ -3203,7 +3238,7 @@ shape_designer.filter.PositionFilter = shape_designer.filter.Filter.extend({
                finally{
                    this.block = false;
                }
-               
+
            },this));
 
            $("input[name='filter_position_y']").on("change", $.proxy(function(){
@@ -3231,7 +3266,7 @@ shape_designer.filter.PositionFilter = shape_designer.filter.Filter.extend({
 	   removePane:function()
        {
 	   },
-	   
+
 	   onInstall:function(figure)
        {
 	   }
@@ -3245,13 +3280,13 @@ shape_designer.filter.PositionFilter = shape_designer.filter.Filter.extend({
 
 shape_designer.filter.RadiusFilter = shape_designer.filter.Filter.extend({
     NAME : "shape_designer.filter.RadiusFilter",
-	
+
 	init:function(){
 	    this._super();
 	},
-	
+
 	insertPane: function(figure, $parent){
-	    
+
 	       $parent.append('<div id="radius_container" class="panel panel-default">'+
                    ' <div class="panel-heading filter-heading" data-toggle="collapse" data-target="#radius_panel">'+
                    '    Corner Radius'+
@@ -3277,17 +3312,17 @@ shape_designer.filter.RadiusFilter = shape_designer.filter.Filter.extend({
            $("#filter_radius").on("change", $.proxy(function(){
                this.setRadius(parseInt($("#filter_radius").val()));
            },figure));
-           
+
            $("#button_remove_RadiusFilter").on("click",$.proxy(function(){
                figure.removeFilter(this);
                figure.setRadius(0);
                $("#radius_container").animate({"height" : "0", "opacity":0, "margin-bottom":0}, 500, function(){$('#radius_container').remove();});
            },this));
 	   },
-	   
+
 	   removePane:function(){
 	   }
-	
+
 
 });
 
@@ -3303,12 +3338,12 @@ var DecoratedInputPort = draw2d.InputPort.extend({
         this.hasChanged = true;
 
         this._super(attr, setter, getter);
-        
+
         this.decoration = new MarkerFigure();
 
         this.add(this.decoration, new draw2d.layout.locator.LeftLocator({margin:8}));
 
-        
+
         // a port can have a value. Useful for workflow engines or circuit diagrams
         this.setValue(true);
     },
@@ -3366,7 +3401,7 @@ var MarkerFigure = draw2d.shape.layout.VerticalLayout.extend({
         this._super($.extend({
               stroke:0
         },attr),
-        setter, 
+        setter,
         getter);
 
 
@@ -3526,8 +3561,8 @@ var MarkerStateAFigure = draw2d.shape.basic.Label.extend({
             color:null,
             fontColor:null,
             fontSize:10
-        },attr), 
-        setter, 
+        },attr),
+        setter,
         getter);
 
         // we must override the hitTest method to ensure that the parent can receive the mouseenter/mouseleave events.
@@ -3554,8 +3589,8 @@ var MarkerStateBFigure = draw2d.shape.layout.HorizontalLayout.extend({
             radius:2,
             padding:{left:3, top:3, bottom:3, right:8},
             gap:5
-        },attr), 
-        setter, 
+        },attr),
+        setter,
         getter);
 
         this.stickTick = new draw2d.shape.basic.Circle({
@@ -3879,9 +3914,9 @@ shape_designer.figure.ExtLabel = draw2d.shape.basic.Label.extend({
 /* jshint evil:true */
 
 shape_designer.figure.ExtPolygon = draw2d.shape.basic.Polygon.extend({
-    
+
     NAME: "shape_designer.figure.ExtPolygon",
-    
+
 
     init:function(attr, setter, getter)
     {
@@ -3889,27 +3924,27 @@ shape_designer.figure.ExtPolygon = draw2d.shape.basic.Polygon.extend({
       this.isExtFigure = true;
 
       this._super(attr, setter, getter);
- 
+
       this.setUserData({name:"Polygon"});
-      
+
       this.filters   = new draw2d.util.ArrayList();
       this.filters.add( new shape_designer.filter.PositionFilter());
       this.filters.add( new shape_designer.filter.SizeFilter());
       this.filters.add( new shape_designer.filter.StrokeFilter());
       this.filters.add( new shape_designer.filter.FillColorFilter());
-      
+
       this.installEditPolicy(new draw2d.policy.figure.RectangleSelectionFeedbackPolicy());
     },
-    
+
     setBlur: function( value){
         this.blur = parseInt(value);
         this.repaint();
     },
-    
+
     getBlur: function(){
-      return this.blur;  
+      return this.blur;
     },
-    
+
     getPotentialFilters: function(){
         return [
                 { label: "Stroke",          impl: "shape_designer.filter.StrokeFilter"},
@@ -3920,14 +3955,14 @@ shape_designer.figure.ExtPolygon = draw2d.shape.basic.Polygon.extend({
                 { label: "Fill Color",      impl: "shape_designer.filter.FillColorFilter"}
                ];
     },
-    
+
     removeFilter:function(filter){
-      this.filters.remove(filter);  
+      this.filters.remove(filter);
     },
 
     addFilter:function(filter){
         var alreadyIn = false;
-        
+
         this.filters.each($.proxy(function(i,e){
             alreadyIn = alreadyIn || (e.NAME===filter.NAME);
         },this));
@@ -3935,37 +3970,37 @@ shape_designer.figure.ExtPolygon = draw2d.shape.basic.Polygon.extend({
         if(alreadyIn===true){
             return; // silently
         }
-        
-        this.filters.add(filter);  
+
+        this.filters.add(filter);
         filter.onInstall(this);
         this.repaint();
     },
-      
+
     onDoubleClick: function()
     {
         this.installEditPolicy(new draw2d.policy.figure.VertexSelectionFeedbackPolicy());
     },
-    
+
     /**
      * @method
      * Unselect the figure and propagete this event to all edit policies.
-     * 
+     *
      * @final
      * @private
      **/
     unselect:function()
     {
         this._super();
-        
+
         this.installEditPolicy(new draw2d.policy.figure.RectangleSelectionFeedbackPolicy());
         return this;
     },
-    
-    
+
+
     /**
      * @method
      * Trigger the repaint of the element.
-     * 
+     *
      */
     repaint:function(attributes)
     {
@@ -3976,14 +4011,14 @@ shape_designer.figure.ExtPolygon = draw2d.shape.basic.Polygon.extend({
         if(this.svgPathString===null){
             this.calculatePath();
         }
-        
+
         if(typeof attributes === "undefined"){
             attributes = {};
         }
-        
-         
+
+
         attributes.path = this.svgPathString;
-        
+
         this.filters.each($.proxy(function(i,filter){
             filter.apply(this, attributes);
         },this));
@@ -4002,24 +4037,24 @@ shape_designer.figure.ExtPolygon = draw2d.shape.basic.Polygon.extend({
     getPersistentAttributes : function()
     {
         var memento = this._super();
-        
+
         memento.blur = this.blur;
         memento.filters = [];
         this.filters.each($.proxy(function(i,e){
             var filterMemento = e.getPersistentAttributes(this);
             memento.filters.push(filterMemento);
         },this));
- 
+
         return memento;
     },
 
     setPersistentAttributes : function( memento)
     {
         this._super(memento);
-        
+
         if(typeof memento.blur !=="undefined")
             this.setBlur(memento.blur);
-        
+
         if(typeof memento.filters !=="undefined"){
             this.filters = new draw2d.util.ArrayList();
             var sizeFilterAdded = false;
@@ -4042,9 +4077,9 @@ shape_designer.figure.ExtPolygon = draw2d.shape.basic.Polygon.extend({
 /* jshint evil:true */
 
 shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
-    
+
     NAME: "shape_designer.figure.ExtPort",
-    
+
 
     init:function()
     {
@@ -4062,7 +4097,7 @@ shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
     	  direction:null,
           fanout:20
     		  });
-      
+
       this.filters   = new draw2d.util.ArrayList();
       this.filters.add( new shape_designer.filter.PositionFilter());
       this.filters.add( new shape_designer.filter.FanoutFilter());
@@ -4071,13 +4106,13 @@ shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
 
       this.installEditPolicy(new draw2d.policy.figure.AntSelectionFeedbackPolicy());
     },
-    
+
 
     setInputType: function(type)
     {
     	this.getUserData().type = type;
     },
-    
+
     getInputType: function()
     {
     	return this.getUserData().type;
@@ -4099,13 +4134,13 @@ shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
         this.getUserData().direction = direction;
         this.updateDecoration();
     },
-    
+
     getConnectionDirection: function()
     {
         return this.getUserData().direction;
     },
 
-    
+
     updateDecoration:function()
     {
         if(this.decoration!==null){
@@ -4137,42 +4172,42 @@ shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
             this.decoration = figure;
         }
     },
-    
+
     getPotentialFilters: function(){
         return [
                 {label:"Port Type",      impl:"shape_designer.filter.PortTypeFilter"},
                 {label:"Port Direction", impl:"shape_designer.filter.PortDirectionFilter"},
                 {label:"Color",          impl:"shape_designer.filter.FillColorFilter"}
-                
+
                 ];
     },
 
     removeFilter:function(filter)
     {
-      this.filters.remove(filter);  
+      this.filters.remove(filter);
     },
 
     addFilter:function(filter)
     {
         var alreadyIn = false;
-        
+
         this.filters.each($.proxy(function(i,e){
             alreadyIn = alreadyIn || (e.NAME===filter.NAME);
         },this));
         if(alreadyIn===true){
             return; // silently
         }
-        
-        this.filters.add(filter);  
+
+        this.filters.add(filter);
         filter.onInstall(this);
         this.repaint();
     },
-      
-    
+
+
     /**
      * @method
      * Trigger the repaint of the element.
-     * 
+     *
      */
     repaint:function(attributes)
     {
@@ -4187,27 +4222,27 @@ shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
         this.filters.each($.proxy(function(i,filter){
             filter.apply(this, attributes);
         },this));
-        
+
         this._super(attributes);
     },
 
     getPersistentAttributes : function()
-    {   
+    {
         var memento = this._super();
-        
+
         memento.filters = [];
         this.filters.each($.proxy(function(i,e){
             var filterMemento = e.getPersistentAttributes(this);
             memento.filters.push(filterMemento);
         },this));
- 
+
         return memento;
     },
-    
+
     setPersistentAttributes : function( memento)
     {
         this._super(memento);
-        
+
 
         if(typeof memento.filters !=="undefined"){
             this.filters = new draw2d.util.ArrayList();
@@ -4231,22 +4266,22 @@ shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
 
 /* jshint evil:true */
 shape_designer.figure.ExtLine = draw2d.shape.basic.PolyLine.extend({
-    
+
     NAME: "shape_designer.figure.ExtLine",
-    
+
 
     init:function()
     {
       this._super();
- 
+
       this.blur = 0;
       this.isExtFigure = true;
 
       this.setUserData({name:"Line"});
-      
+
       this.filters   = new draw2d.util.ArrayList();
       this.filters.add( new shape_designer.filter.StrokeFilter());
-      
+
       this.setRouter(new draw2d.layout.connection.VertexRouter());
       this.installEditPolicy(new draw2d.policy.line.VertexSelectionFeedbackPolicy());
     },
@@ -4255,11 +4290,11 @@ shape_designer.figure.ExtLine = draw2d.shape.basic.PolyLine.extend({
         this.blur = parseInt(value);
         this.repaint();
     },
-    
+
     getBlur: function(){
-      return this.blur;  
+      return this.blur;
     },
-    
+
     getPotentialFilters: function(){
         return [
                 {label:"Opacity", impl:"shape_designer.filter.OpacityFilter"},
@@ -4269,37 +4304,37 @@ shape_designer.figure.ExtLine = draw2d.shape.basic.PolyLine.extend({
                 {label:"Stroke", impl:"shape_designer.filter.StrokeFilter"}
                ];
     },
-     
+
     removeFilter:function(filter)
     {
-      this.filters.remove(filter);  
-      
+      this.filters.remove(filter);
+
       return this;
     },
 
     addFilter:function(filter)
     {
         var alreadyIn = false;
-        
+
         this.filters.each($.proxy(function(i,e){
             alreadyIn = alreadyIn || (e.NAME===filter.NAME);
         },this));
         if(alreadyIn===true){
             return; // silently
         }
-        
-        this.filters.add(filter);  
+
+        this.filters.add(filter);
         filter.onInstall(this);
         this.repaint();
-        
+
         return this;
     },
-    
-    
+
+
     /**
      * @method
      * Trigger the repaint of the element.
-     * 
+     *
      */
     repaint:function(attributes)
     {
@@ -4310,32 +4345,32 @@ shape_designer.figure.ExtLine = draw2d.shape.basic.PolyLine.extend({
         if(typeof attributes === "undefined"){
             attributes = {};
         }
-        
+
         this.filters.each($.proxy(function(i,filter){
             filter.apply(this, attributes);
         },this));
-        
+
 //        this.shape.blur(this.blur);
         this._super(attributes);
     },
 
     getPersistentAttributes : function()
-    {   
+    {
         var memento = this._super();
-        
+
         memento.filters = [];
         this.filters.each($.proxy(function(i,e){
             var filterMemento = e.getPersistentAttributes(this);
             memento.filters.push(filterMemento);
         },this));
- 
+
         return memento;
     },
-    
+
     setPersistentAttributes : function( memento)
     {
         this._super(memento);
-        
+
 
         if(typeof memento.filters !=="undefined"){
             this.filters = new draw2d.util.ArrayList();
@@ -4355,7 +4390,7 @@ shape_designer.figure.PolyRect = shape_designer.figure.ExtPolygon.extend({
     init:function(topLeft, bottomRight)
     {
       this._super();
-    
+
       if(typeof topLeft === "undefined"){
           this.vertices   = new draw2d.util.ArrayList();
           this.addVertex(new draw2d.geo.Point(100,100) );
@@ -4370,7 +4405,7 @@ shape_designer.figure.PolyRect = shape_designer.figure.ExtPolygon.extend({
           this.addVertex(new draw2d.geo.Point(bottomRight.x,bottomRight.y) );
           this.addVertex(new draw2d.geo.Point(topLeft.x,bottomRight.y));
       }
-      
+
       this.setUserData({name:"Rectangle"});
     }
 });
@@ -4390,16 +4425,16 @@ shape_designer.figure.PolyCircle = draw2d.shape.basic.Oval.extend({
       if(typeof radius==="undefined" ){
           radius = 10;
       }
-      
+
       this._super({stroke:0, bgColor:"95C06A", width:radius*2, height:radius*2});
-      
+
       // center must be set after the width/height...bug
       if(typeof center!=="undefined"){
           this.setCenter(center);
       }
-      
+
       this.setUserData({name:"Circle"});
-      
+
       this.filters = new draw2d.util.ArrayList();
       this.filters.add( new shape_designer.filter.PositionFilter());
       this.filters.add( new shape_designer.filter.SizeFilter());
@@ -4415,41 +4450,41 @@ shape_designer.figure.PolyCircle = draw2d.shape.basic.Oval.extend({
                 {label:"Fill Color", impl:"shape_designer.filter.FillColorFilter"}
                 ];
     },
-    
+
     removeFilter:function(filter){
-      this.filters.remove(filter);  
+      this.filters.remove(filter);
     },
 
     addFilter:function(filter){
         var alreadyIn = false;
-        
+
         this.filters.each($.proxy(function(i,e){
             alreadyIn = alreadyIn || (e.NAME===filter.NAME);
         },this));
-        
+
         if(alreadyIn===true){
             return; // silently
         }
-        
-        this.filters.add(filter);  
+
+        this.filters.add(filter);
         filter.onInstall(this);
         this.repaint();
     },
-   
-    
+
+
     setBlur: function( value){
         this.blur = parseInt(value);
         this.repaint();
     },
-    
+
     getBlur: function(){
-      return this.blur;  
+      return this.blur;
     },
-    
+
     /**
      * @method
      * Trigger the repaint of the element.
-     * 
+     *
      */
     repaint:function(attributes)
     {
@@ -4460,7 +4495,7 @@ shape_designer.figure.PolyCircle = draw2d.shape.basic.Oval.extend({
         this.filters.each($.proxy(function(i,filter){
             filter.apply(this, attributes);
         },this));
-        
+
 //        this.shape.blur(this.blur);
         this._super(attributes);
     },
@@ -4479,30 +4514,30 @@ shape_designer.figure.PolyCircle = draw2d.shape.basic.Oval.extend({
             var y = Math.sin( radian )*h2+center.y;
             vertices.add(new draw2d.geo.Point(x,y) );
         }
-        return vertices;	
+        return vertices;
     },
-    
+
     getPersistentAttributes : function()
-    {   
+    {
         var memento = this._super();
-        
+
         memento.blur = this.blur;
         memento.filters = [];
         this.filters.each($.proxy(function(i,e){
             var filterMemento = e.getPersistentAttributes(this);
             memento.filters.push(filterMemento);
         },this));
- 
+
         return memento;
     },
-    
+
     setPersistentAttributes : function( memento)
     {
         this._super(memento);
-        
+
         if(typeof memento.blur !=="undefined")
             this.setBlur(memento.blur);
-        
+
         if(typeof memento.filters !=="undefined"){
             this.filters = new draw2d.util.ArrayList();
             $.each(memento.filters, $.proxy(function(i,e){
@@ -4518,7 +4553,7 @@ shape_designer.storage.BackendStorage = Class.extend({
 
     /**
      * @constructor
-     * 
+     *
      */
     init:function(){
         this.octo=null;
@@ -4527,7 +4562,7 @@ shape_designer.storage.BackendStorage = Class.extend({
         this.currentPath = "";
         this.currentFileHandle = null;
     },
-    
+
 
     connect: function(token, callback)
     {
@@ -4607,22 +4642,22 @@ shape_designer.storage.BackendStorage = Class.extend({
 });
 
 shape_designer.FigureWriter = draw2d.io.Writer.extend({
-    
+
     init:function(){
         this._super();
     },
-   
+
     /**
      * @method
      * Export the content to the implemented data format. Inherit class implements
      * content specific writer.
      * <br>
      * <br>
-     * 
+     *
      * Method signature has been changed from version 2.10.1 to version 3.0.0.<br>
      * The parameter <b>resultCallback</b> is required and new. The method calls
      * the callback instead of return the result.
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @parma {String} className
      * @param {Function} resultCallback the method to call on success. The first argument is the result object, the second the base64 representation of the file content
@@ -4635,15 +4670,15 @@ shape_designer.FigureWriter = draw2d.io.Writer.extend({
 
         var x = b.x;
         var y = b.y;
-        
+
         var ports  = [];
         var shapes = [];
-        
+
         shapes.push({constructor: 'this.canvas.paper.path("M0,0 L'+(b.w)+',0 L'+(b.w)+','+(b.h)+' L0,'+(b.h)+ '")',
                      attr       : '{"stroke":"none","stroke-width":0,"fill":"none"}',
                      name       : "BoundingBox"
                     });
-        
+
         figures.each(function(i,figure){
             figure.uninstallEditPolicy("draw2d.policy.figure.RegionEditPolicy");
             var attr = {};
@@ -4657,14 +4692,14 @@ shape_designer.FigureWriter = draw2d.io.Writer.extend({
             delete attr.y;
             if((figure instanceof shape_designer.figure.ExtPolygon)){
                 shapes.push({
-                    constructor:"this.canvas.paper.path('"+figure.svgPathString+"')", 
+                    constructor:"this.canvas.paper.path('"+figure.svgPathString+"')",
                     attr:JSON.stringify(attr) ,
                     extra:figure.getBlur()===0?"": "shape.blur("+figure.getBlur()+");\n",
                     name: figure.getUserData().name
                     });
             } else if((figure instanceof shape_designer.figure.PolyCircle)){
                 shapes.push({
-                    constructor:"this.canvas.paper.ellipse()", 
+                    constructor:"this.canvas.paper.ellipse()",
                     attr:JSON.stringify(attr) ,
                     extra:figure.getBlur()===0?"": "shape.blur("+figure.getBlur()+");\n",
                     name: figure.getUserData().name
@@ -4672,15 +4707,15 @@ shape_designer.FigureWriter = draw2d.io.Writer.extend({
             }else if((figure instanceof shape_designer.figure.ExtLine)){
                 // drop shadow
                 shapes.push({
-                    constructor:"this.canvas.paper.path('"+figure.svgPathString+"')", 
+                    constructor:"this.canvas.paper.path('"+figure.svgPathString+"')",
                     attr:JSON.stringify($.extend({},attr,{"stroke-width": attr["stroke-width"]+figure.getOutlineStroke(), "stroke": figure.getOutlineColor().hash()})),
                     extra:figure.getBlur()===0?"": "shape.blur("+figure.getBlur()+");\n",
                     name: figure.getUserData().name+"_shadow"
                     });
-                
+
                 // the line itself
                 shapes.push({
-                    constructor:"this.canvas.paper.path('"+figure.svgPathString+"')", 
+                    constructor:"this.canvas.paper.path('"+figure.svgPathString+"')",
                     attr:JSON.stringify(attr) ,
                     extra:figure.getBlur()===0?"": "shape.blur("+figure.getBlur()+");\n",
                     name: figure.getUserData().name
@@ -4691,7 +4726,7 @@ shape_designer.FigureWriter = draw2d.io.Writer.extend({
                 attr.y = attr.y+figure.getAbsoluteY();
                 delete attr.transform;
                 shapes.push({
-                    constructor:"this.canvas.paper.text(0,0,'"+figure.getText()+"')", 
+                    constructor:"this.canvas.paper.text(0,0,'"+figure.getText()+"')",
                     attr:JSON.stringify(attr) ,
                     extra :"",
                     name: figure.getUserData().name
@@ -4710,7 +4745,7 @@ shape_designer.FigureWriter = draw2d.io.Writer.extend({
             }
             figure.translate(x,y);
         });
-        
+
         var template =$("#shape-base-template").text().trim();
 
         var compiled = Hogan.compile(template);
@@ -4728,12 +4763,12 @@ shape_designer.FigureWriter = draw2d.io.Writer.extend({
     }
 });
 shape_designer.policy.AbstractToolPolicy = draw2d.policy.canvas.SelectionPolicy.extend({
-	
+
 	init:function(){
 	    this._super();
 	},
-	
-   
+
+
     setToolHeader: function(heading, icon ){
         $('#currentTool_image').fadeOut(200, function() {
             $("#currentTool_image").attr({"src": "./assets/images/tools/"+icon});
@@ -4759,47 +4794,47 @@ shape_designer.policy.AbstractToolPolicy = draw2d.policy.canvas.SelectionPolicy.
 
 /* jshint evil: true */
 shape_designer.policy.AbstractGeoToolPolicy = shape_designer.policy.AbstractToolPolicy.extend({
-	
+
 	init:function(){
 	    this._super();
 	    this.firstFigure = null;
 	    this.operation =null;
 	},
-	
-    
+
+
     onInstall: function(canvas){
         this.setToolHeader("");
         this.setToolMessage("Select first figure..");
     },
-    
+
     select: function(canvas, figure){
         console.log(figure);
         if(canvas.getSelection().getAll().contains(figure)){
             return; // nothing to to
         }
-        
+
         // check if the element an valid polygon. otherwise an boolean operation
         // isn't possible
         if(!(figure instanceof shape_designer.figure.ExtPolygon)){
             return;
         }
-        
+
         if(canvas.getSelection().getPrimary()!==null){
             this.unselect(canvas, canvas.getSelection().getPrimary());
         }
-      
+
         if(figure !==null) {
             figure.select(true); // primary selection
         }
-        
+
         canvas.getSelection().setPrimary(figure);
 
         // inform all selection listeners about the new selection.
         //
         canvas.fireEvent("select",{figure:figure});
     },
-    
-    
+
+
     execute: function(canvas, firstFigure, figure){
         if(firstFigure instanceof draw2d.util.ArrayList){
             if(firstFigure.getSize()<2){
@@ -4810,7 +4845,7 @@ shape_designer.policy.AbstractGeoToolPolicy = shape_designer.policy.AbstractTool
         }
         this.executeGeometryOperation(canvas, firstFigure, figure, this.operation);
     },
-    
+
     executeGeometryOperation: function(canvas, figure1, figure2, operationFunc){
         var p1 = this.getGeometry(figure1);
         var p2 = this.getGeometry(figure2);
@@ -4833,14 +4868,14 @@ shape_designer.policy.AbstractGeoToolPolicy = shape_designer.policy.AbstractTool
         canvas.getCommandStack().execute(cmd);
 
     },
-    
+
     getGeometry: function(figure){
-        var reader = new jsts.io.WKTReader();  
+        var reader = new jsts.io.WKTReader();
         var v= figure.getVertices().clone().asArray();
         v.push(v[0]);
         return reader.read("POLYGON(("+$.map(v, function(e){return e.x+" "+e.y;}).join(", ")+"))");
     }
-   
+
 });
 
 
@@ -4849,22 +4884,22 @@ shape_designer.policy.AbstractGeoToolPolicy = shape_designer.policy.AbstractTool
 
 
 shape_designer.policy.GeoUnionToolPolicy = shape_designer.policy.AbstractGeoToolPolicy.extend({
-	
+
 	init:function(){
 	    this._super();
 	    this.operation = "union";
 	},
-	
-    
+
+
     onInstall: function(canvas){
         this.setToolHeader("Merge Polygons", "SURFACE_BOOL_ADD_064.png");
     	this.setToolText( "Select polygon to add to..");
     },
-    
-    
+
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -4872,7 +4907,7 @@ shape_designer.policy.GeoUnionToolPolicy = shape_designer.policy.AbstractGeoTool
      * @param {Boolean} ctrlKey true if the ctrl key has been pressed during the event
      */
     onMouseDown:function(canvas, x, y, shiftKey, ctrlKey){
- 
+
         var figure = canvas.getBestFigure(x, y);
 
         // check if the user click on a child shape. DragDrop and movement must redirect
@@ -4894,8 +4929,8 @@ shape_designer.policy.GeoUnionToolPolicy = shape_designer.policy.AbstractGeoTool
             	this.setToolText("Select polygon to add to");
             }
         }
-    }    
-    
+    }
+
 });
 
 
@@ -4904,22 +4939,22 @@ shape_designer.policy.GeoUnionToolPolicy = shape_designer.policy.AbstractGeoTool
 
 
 shape_designer.policy.GeoDifferenceToolPolicy = shape_designer.policy.AbstractGeoToolPolicy.extend({
-	
+
 	init:function(){
 	    this._super();
 	    this.operation ="difference";
 	},
-	
-    
+
+
     onInstall: function(canvas){
         this.setToolHeader("Subtract Polygon", "SURFACE_BOOL_SUBTRACT_064.png");
     	this.setToolText( "Select polygon to subtract from");
     },
-    
-    
+
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -4958,22 +4993,22 @@ shape_designer.policy.GeoDifferenceToolPolicy = shape_designer.policy.AbstractGe
 
 
 shape_designer.policy.GeoIntersectionToolPolicy = shape_designer.policy.AbstractGeoToolPolicy.extend({
-	
+
 	init:function(){
 	    this._super();
 	    this.operation="intersection";
 	},
-	
-    
+
+
     onInstall: function(canvas){
         this.setToolHeader("Intersect Polygon", "SURFACE_BOOL_INTERSECT_064.png");
     	this.setToolText( "Select polygon to intersect with");
     },
-    
-    
+
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -4981,7 +5016,7 @@ shape_designer.policy.GeoIntersectionToolPolicy = shape_designer.policy.Abstract
      * @param {Boolean} ctrlKey true if the ctrl key has been pressed during the event
      */
     onMouseDown:function(canvas, x, y, shiftKey, ctrlKey){
- 
+
         var figure = canvas.getBestFigure(x, y);
 
         // check if the user click on a child shape. DragDrop and movement must redirect
@@ -5004,8 +5039,8 @@ shape_designer.policy.GeoIntersectionToolPolicy = shape_designer.policy.Abstract
             }
         }
     }
-    
-    
+
+
 });
 
 
@@ -5014,12 +5049,12 @@ shape_designer.policy.GeoIntersectionToolPolicy = shape_designer.policy.Abstract
 
 
 shape_designer.policy.SelectionToolPolicy = draw2d.policy.canvas.BoundingboxSelectionPolicy.extend({
-	
+
 	init:function()
     {
 	    this._super();
 	},
-	
+
     onInstall: function(canvas)
     {
         this.setToolHeader("Selection", "SELECT_TOOL_064.png");
@@ -5085,22 +5120,22 @@ shape_designer.policy.SelectionToolPolicy = draw2d.policy.canvas.BoundingboxSele
 
 
 shape_designer.policy.RectangleToolPolicy = shape_designer.policy.AbstractToolPolicy.extend({
-	
+
 	init:function(){
 	    this._super();
-	    
+
 	    this.topLeftPoint = null;
         this.boundingBoxFigure1 = null;
         this.boundingBoxFigure2 = null;
 	},
 
-    
+
     onInstall: function(canvas){
         this.setToolHeader("Diagonal Polygon", "POLYGON_DIAGONALS_064.png");
         this.setToolText("Select first corner of rectangle");
         canvas.setCursor("cursor_rectangle.png");
     },
-    
+
     onUninstall: function(canvas){
         if(this.boundingBoxFigure1 !==null){
             this.boundingBoxFigure1.setCanvas(null);
@@ -5110,10 +5145,10 @@ shape_designer.policy.RectangleToolPolicy = shape_designer.policy.AbstractToolPo
         }
         canvas.setCursor(null);
     },
-   
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5123,17 +5158,17 @@ shape_designer.policy.RectangleToolPolicy = shape_designer.policy.AbstractToolPo
     onMouseDown:function(canvas, x, y, shiftKey, ctrlKey){
 
     },
-    
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse event
      * @param {Number} y the y-coordinate of the mouse event
      * @template
      */
     onMouseMove:function(canvas, x, y){
-       
+
         if (this.boundingBoxFigure1!==null) {
             var dx = this.topLeftPoint.x -x;
             var dy = this.topLeftPoint.y -y;
@@ -5143,11 +5178,11 @@ shape_designer.policy.RectangleToolPolicy = shape_designer.policy.AbstractToolPo
             this.boundingBoxFigure2.setPosition(x + Math.min(0,dx), y + Math.min(0,dy));
         }
     },
-    
-    
+
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} dx The x diff between start of dragging and this event
      * @param {Number} dy The y diff between start of dragging and this event
@@ -5157,10 +5192,10 @@ shape_designer.policy.RectangleToolPolicy = shape_designer.policy.AbstractToolPo
      */
     onMouseDrag:function(canvas, dx, dy, dx2, dy2){
     },
-    
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5176,7 +5211,7 @@ shape_designer.policy.RectangleToolPolicy = shape_designer.policy.AbstractToolPo
             this.boundingBoxFigure1.setCanvas(canvas);
             this.boundingBoxFigure1.setBackgroundColor("#333333");
             this.boundingBoxFigure1.setAlpha(0.1);
-            
+
             this.boundingBoxFigure2 = new draw2d.shape.basic.Rectangle({width:1,height:1});
             this.boundingBoxFigure2.setPosition(x,y);
             this.boundingBoxFigure2.setCanvas(canvas);
@@ -5208,26 +5243,26 @@ shape_designer.policy.RectangleToolPolicy = shape_designer.policy.AbstractToolPo
 
 
 shape_designer.policy.CircleToolPolicy = shape_designer.policy.AbstractToolPolicy.extend({
-	
+
     TITLE: "Circle",
     MESSAGE_STEP1 : "Select center of the circle",
     MESSAGE_STEP2 : "Select outer bound",
-    
+
 	init:function(){
 	    this._super();
-	    
+
 	    this.center = null;
         this.boundingBoxFigure1 = null;
         this.boundingBoxFigure2 = null;
 	},
 
-    
+
     onInstall: function(canvas){
         this.setToolHeader(this.TITLE, "CIRCLE_1_064.png");
         this.setToolText(this.MESSAGE_STEP1);
         canvas.setCursor("cursor_circle.png");
     },
-    
+
     onUninstall: function(canvas){
         if(this.boundingBoxFigure1 !==null){
             this.boundingBoxFigure1.setCanvas(null);
@@ -5237,11 +5272,11 @@ shape_designer.policy.CircleToolPolicy = shape_designer.policy.AbstractToolPolic
         }
         canvas.setCursor(null);
     },
-    
+
 
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5251,28 +5286,28 @@ shape_designer.policy.CircleToolPolicy = shape_designer.policy.AbstractToolPolic
     onMouseDown:function(canvas, x, y, shiftKey, ctrlKey){
 
     },
-    
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse event
      * @param {Number} y the y-coordinate of the mouse event
      * @template
      */
     onMouseMove:function(canvas, x, y){
-       
+
         if (this.boundingBoxFigure1!==null) {
             var dx = Math.abs(this.center.x -x);
             this.boundingBoxFigure1.setRadius(dx);
             this.boundingBoxFigure2.setRadius(dx);
         }
     },
-    
-    
+
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} dx The x diff between start of dragging and this event
      * @param {Number} dy The y diff between start of dragging and this event
@@ -5282,10 +5317,10 @@ shape_designer.policy.CircleToolPolicy = shape_designer.policy.AbstractToolPolic
      */
     onMouseDrag:function(canvas, dx, dy, dx2, dy2){
     },
-    
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5301,7 +5336,7 @@ shape_designer.policy.CircleToolPolicy = shape_designer.policy.AbstractToolPolic
             this.boundingBoxFigure1.setCanvas(canvas);
             this.boundingBoxFigure1.setBackgroundColor("#333333");
             this.boundingBoxFigure1.setAlpha(0.1);
-            
+
             this.boundingBoxFigure2 = new draw2d.shape.basic.Circle({radius:1});
             this.boundingBoxFigure2.setCenter(x,y);
             this.boundingBoxFigure2.setCanvas(canvas);
@@ -5332,33 +5367,33 @@ shape_designer.policy.CircleToolPolicy = shape_designer.policy.AbstractToolPolic
 
 
 shape_designer.policy.TextToolPolicy = shape_designer.policy.AbstractToolPolicy.extend({
-    
+
     TITLE: "Text",
     MESSAGE_STEP1 : "Select location for text",
     MESSAGE_STEP2 : "Enter Text",
-    
+
     init:function(){
         this._super();
-        
+
         this.topLeft = null;
         this.newFigure = null;
     },
 
-    
+
     onInstall: function(canvas){
         this.setToolHeader(this.TITLE, "TEXT_064.png");
         this.setToolText(this.MESSAGE_STEP1);
         canvas.setCursor("cursor_text.png");
     },
-    
+
     onUninstall: function(canvas){
         canvas.setCursor(null);
     },
-    
-    
+
+
      /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5368,10 +5403,10 @@ shape_designer.policy.TextToolPolicy = shape_designer.policy.AbstractToolPolicy.
     onMouseDown:function(canvas, x, y, shiftKey, ctrlKey){
 
     },
-    
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse event
      * @param {Number} y the y-coordinate of the mouse event
@@ -5379,11 +5414,11 @@ shape_designer.policy.TextToolPolicy = shape_designer.policy.AbstractToolPolicy.
      */
     onMouseMove:function(canvas, x, y){
     },
-    
-    
+
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} dx The x diff between start of dragging and this event
      * @param {Number} dy The y diff between start of dragging and this event
@@ -5393,10 +5428,10 @@ shape_designer.policy.TextToolPolicy = shape_designer.policy.AbstractToolPolicy.
      */
     onMouseDrag:function(canvas, dx, dy, dx2, dy2){
     },
-    
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5412,11 +5447,11 @@ shape_designer.policy.TextToolPolicy = shape_designer.policy.AbstractToolPolicy.
             this.newFigure.setStroke(0);
             this.newFigure.setPadding(5);
             this.newFigure.setFontSize(16);
-           
+
             var command = new draw2d.command.CommandAdd(canvas, this.newFigure, parseInt(x),parseInt(y));
             canvas.getCommandStack().execute(command);
             canvas.setCurrentSelection(this.newFigure);
-            
+
             // start inplace editing
             //
             setTimeout($.proxy(function(){this.newFigure.onDoubleClick();},this),100);
@@ -5433,29 +5468,29 @@ shape_designer.policy.TextToolPolicy = shape_designer.policy.AbstractToolPolicy.
 
 
 shape_designer.policy.PortToolPolicy = shape_designer.policy.SelectionToolPolicy.extend({
-    
+
     TITLE: "Port",
     MESSAGE_STEP1 : "Select location to add port.<br>Click on port to move.",
-    
+
     init:function()
     {
         this._super();
     },
 
-    
+
     onInstall: function(canvas)
     {
         this.setToolHeader(this.TITLE, "PORT_064.png");
         this.setToolText(this.MESSAGE_STEP1);
         canvas.setCursor("cursor_port.png");
     },
-    
+
     onUninstall: function(canvas)
     {
         canvas.setCursor(null);
     },
-    
-    
+
+
     select: function(canvas, figure)
     {
       // check if the element an valid polygon. otherwise an boolean operation
@@ -5466,19 +5501,19 @@ shape_designer.policy.PortToolPolicy = shape_designer.policy.SelectionToolPolicy
 
         this._super(canvas, figure);
     },
-    
+
     onMouseDown:function(canvas, x, y, shiftKey, ctrlKey)
     {
         var figure = canvas.getBestFigure(x, y);
-        
+
         if(figure===null || figure instanceof shape_designer.figure.ExtPort){
             this._super(canvas,x,y,shiftKey, ctrlKey);
         }
     },
-    
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5494,7 +5529,7 @@ shape_designer.policy.PortToolPolicy = shape_designer.policy.SelectionToolPolicy
         else{
             this._super(canvas,x,y);
         }
-    }   
+    }
 });
 
 
@@ -5503,25 +5538,25 @@ shape_designer.policy.PortToolPolicy = shape_designer.policy.SelectionToolPolicy
 
 
 shape_designer.policy.LineToolPolicy = shape_designer.policy.AbstractToolPolicy.extend({
-	
+
     MESSAGE_STEP1 : "Select start point of the line.",
     MESSAGE_STEP2 : "Click to add additional vertex.<br>Double click to finish line.",
 
 	init:function(){
 	    this._super();
-	    
+
         this.lineFigure = null;
         this.canvas = null;
 	},
 
-    
+
     onInstall: function(canvas){
         this.setToolHeader("Line", "LINE_064.png");
         this.setToolText(this.MESSAGE_STEP1);
         this.canvas = canvas;
         canvas.setCursor("cursor_line.png");
     },
-    
+
     onUninstall: function(canvas){
         if(this.lineFigure !==null){
             if(this.lineFigure.getVertices().getSize()<2){
@@ -5537,10 +5572,10 @@ shape_designer.policy.LineToolPolicy = shape_designer.policy.AbstractToolPolicy.
         this.canvas = null;
         canvas.setCursor(null);
     },
-   
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5550,26 +5585,26 @@ shape_designer.policy.LineToolPolicy = shape_designer.policy.AbstractToolPolicy.
     onMouseDown:function(canvas, x, y, shiftKey, ctrlKey){
 
     },
-    
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse event
      * @param {Number} y the y-coordinate of the mouse event
      * @template
      */
     onMouseMove:function(canvas, x, y){
-       
+
         if (this.lineFigure!==null) {
             this.lineFigure.setEndPoint(x,y);
         }
     },
-    
-    
+
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} dx The x diff between start of dragging and this event
      * @param {Number} dy The y diff between start of dragging and this event
@@ -5579,9 +5614,9 @@ shape_designer.policy.LineToolPolicy = shape_designer.policy.AbstractToolPolicy.
      */
     onMouseDrag:function(canvas, dx, dy, dx2, dy2){
     },
-    
 
-    
+
+
     onDoubleClick: function(figure, x, y, shiftKey, ctrlKey){
         this.onClick(figure, x, y, shiftKey, ctrlKey);
 
@@ -5589,7 +5624,7 @@ shape_designer.policy.LineToolPolicy = shape_designer.policy.AbstractToolPolicy.
         // Reason: before the double click is fired the two "single click" comes before. In this case we
         // added three vertex for a doubleClick event
         //
-        
+
         // don't use the shortcut and assign the this.lineFigure.vertices to a local var.
         // the vertices are recreated in the "calculatePath" mnethod of the polygon and
         // the reference is in this case invalid...design flaw!
@@ -5600,14 +5635,14 @@ shape_designer.policy.LineToolPolicy = shape_designer.policy.AbstractToolPolicy.
             this.lineFigure.removeVertexAt(this.lineFigure.vertices.getSize()-2);
             beforeLast = this.lineFigure.vertices.get(this.lineFigure.vertices.getSize()-2);
         }
-               
+
         this.lineFigure = null;
     },
-    
-    
+
+
     /**
      * @method
-     * 
+     *
      * @param {draw2d.Canvas} canvas
      * @param {Number} x the x-coordinate of the mouse down event
      * @param {Number} y the y-coordinate of the mouse down event
@@ -5631,7 +5666,3 @@ shape_designer.policy.LineToolPolicy = shape_designer.policy.AbstractToolPolicy.
         }
     }
 });
-
-
-
-
