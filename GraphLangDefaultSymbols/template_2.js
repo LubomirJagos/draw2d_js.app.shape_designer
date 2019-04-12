@@ -66,7 +66,7 @@ var GraphLangSymbolTemplate = [
     },
     "cssClass": "shape_designer_figure_PolyCircle",
     "ports": [],
-    "bgColor": "#23C0A6",
+    "bgColor": "#C09D0F",
     "color": "#1B1B1B",
     "stroke": 0,
     "radius": 0,
