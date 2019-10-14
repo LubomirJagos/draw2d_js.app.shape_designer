@@ -4103,6 +4103,8 @@ shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
       this.filters.add( new shape_designer.filter.FanoutFilter());
       this.filters.add( new shape_designer.filter.PortDirectionFilter());
       this.filters.add( new shape_designer.filter.PortTypeFilter());
+//    LuboJ extension, for now just to watch if I'm able to modify it
+      this.filters.add( new GraphLang_shape_designer.filter.GeneratedCodeFilter());
 
       this.installEditPolicy(new draw2d.policy.figure.AntSelectionFeedbackPolicy());
     },
@@ -4177,8 +4179,10 @@ shape_designer.figure.ExtPort = draw2d.shape.basic.Circle.extend({
         return [
                 {label:"Port Type",      impl:"shape_designer.filter.PortTypeFilter"},
                 {label:"Port Direction", impl:"shape_designer.filter.PortDirectionFilter"},
-                {label:"Color",          impl:"shape_designer.filter.FillColorFilter"}
+                {label:"Color",          impl:"shape_designer.filter.FillColorFilter"},
 
+//LuboJ added, item into list what to add to selected shape element
+                {label:"Generated Code",      impl:"GraphLang_shape_designer.filter.GeneratedCodeFilter"}
                 ];
     },
 
